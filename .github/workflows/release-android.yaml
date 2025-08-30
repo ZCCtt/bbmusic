@@ -28,7 +28,7 @@ jobs:
           distribution: zulu
           java-version: 17
 
-      - name: 将screct变量添加签名文件
+      - name: 添加签名文件
         run: |
           echo ${{ secrets.KEYSTORE_BASE64 }}  | base64 --decode > ./android/app/bbmusic-keystore.jks
           echo -e "${{ secrets.KEY_PROPERTIES }}" > ./android/key.properties
@@ -42,13 +42,20 @@ jobs:
           channel: stable
           cache: true
 
-      - run: flutter build apk --split-per-abi
-      - run: flutter build apk
+      - name: 构建 APK
+        run: flutter build apk --split-per-abi
 
-      - name: 推送到 release
+      - name: 自动打 tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ github.event.inputs.tag }}
+          git push origin ${{ github.event.inputs.tag }}
+
+      - name: 发布 Release
         uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: ./build/app/outputs/flutter-apk/*
-          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.event.inputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
